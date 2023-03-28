@@ -1,0 +1,102 @@
+-- Quarry settings
+local size = 10 -- The size of the quarry (in blocks)
+local height = 10 -- The depth of the quarry (in blocks)
+local fuelSlot = 1 -- The slot where the turtle's fuel is stored
+local enderChestSide = "front" -- The side of the turtle where the ender chest is placed
+local torchInterval = 0 -- The number of blocks the turtle should move before placing a torch (disabled by default)
+local turtleCount = 4 -- The number of turtles to use for mining the quarry
+local rednetChannel = 12345 -- The rednet channel used to communicate between the turtles
+
+-- Prompt the user to configure the quarry settings
+function configureQuarry()
+    term.clear()
+    term.setCursorPos(1,1)
+
+    print("Enter the size of the quarry (in blocks):")
+    size = tonumber(read())
+
+    print("Enter the depth of the quarry (in blocks):")
+    height = tonumber(read())
+
+    print("Enable torch placement? (y/n):")
+    local enableTorchPlacement = read()
+    if enableTorchPlacement == "y" then
+        print("Enter the torch placement interval (in blocks):")
+        torchInterval = tonumber(read())
+    end
+
+    print("Enter the number of turtles to use:")
+    turtleCount = tonumber(read())
+
+    print("Enter the rednet channel to use:")
+    rednetChannel = tonumber(read())
+end
+
+-- Prompt the user to configure the rednet channel
+function configureRednet()
+    term.clear()
+    term.setCursorPos(1,1)
+
+    print("Enter the rednet channel to use:")
+    rednetChannel = tonumber(read())
+end
+
+-- Refuel the turtle
+function refuel()
+    turtle.select(fuelSlot)
+    if turtle.getFuelLevel() == 0 then
+        turtle.refuel()
+    end
+end
+
+-- Quarry function
+function quarry(turtleIndex)
+    local xStart = (turtleIndex - 1) * size // turtleCount + 1
+    local xEnd = turtleIndex * size // turtleCount
+
+    for y = 1, height do
+        for x = xStart, xEnd do
+            for z = 1, size do
+                -- Dig forward
+                turtle.dig()
+                turtle.forward()
+
+                -- Place a torch every torchInterval blocks
+                if torchInterval > 0 and (x + z) % torchInterval == 0 then
+                    turtle.back()
+                    turtle.select(16) -- Assumes torches are in slot 16
+                    turtle.place()
+                    turtle.select(fuelSlot)
+                    turtle.forward()
+                end
+
+                -- Deposit items in Ender Chest
+                for i = 1, 16 do
+                    turtle.select(i)
+                    if turtle.getItemCount() > 0 then
+                        turtle.drop(64)
+                    end
+                end
+
+                -- Refuel from Ender Chest in slot 3
+                if turtle.getFuelLevel() == 0 then
+                    turtle.select(3) -- Assumes Ender Chest is in slot 3
+                    turtle.place(enderChestSide)
+                    turtle.suck(64)
+                    turtle.refuel()
+                    turtle.dig()
+                end
+            end
+
+            -- Turn and move to the next row
+            if x < xEnd then
+                if x % 2 == 0 then
+                    turtle.turnRight()
+                else
+                    turtle.turnLeft()
+                end
+                turtle.dig()
+                turtle.forward()
+                if x % 2 == 0 then
+                    turtle.turnRight()
+               
